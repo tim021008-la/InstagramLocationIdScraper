@@ -3,29 +3,20 @@
  *
  * This script automates the process of:
  * 1. Launching a headless Chromium browser.
- * 2. Navigating to a specified Instagram "explore locations" country page.
+ * 2. Checking for a previously saved session file to resume scraping.
  * 3. Systematically navigating through all pagination links (e.g., ?page=2, ?page=3).
  * 4. Scraping the URLs for all cities found across all pages.
  * 5. Visiting each city URL one by one.
  * 6. For each city, repeating the pagination process to find all specific locations.
  * 7. Scraping the name and URL of each specific location.
  * 8. Aggregating all the collected data into a structured JSON object.
- * 9. Saving the final data to a local file.
+ * 9. Saving the final data to a local file upon completion or if a fatal error occurs.
  *
  * @author tim021008-la
- * @version 1.5.0
+ * @version 1.1.0
  *
  * @requires puppeteer - For browser automation and web scraping.
  * @requires fs - Node.js built-in module for file system operations (e.g., writing files).
- *
- * To Run:
- * 1. Ensure Node.js and npm are installed on your machine.
- * 2. Create a new folder for this project.
- * 3. Save this file as `scraper.js` inside that folder.
- * 4. Open a terminal or command prompt and navigate into the project folder.
- * 5. Run `npm init -y` to create a `package.json` file.
- * 6. Run `npm install puppeteer` to download the library and a compatible browser.
- * 7. Execute the script by running `node scraper.js`.
  */
 
 const puppeteer = require('puppeteer');
@@ -110,8 +101,8 @@ async function scrapeAllPages(browser, baseUrl, extractDataOnPage) {
             } catch (error) {
                 console.error(`[ERROR] Attempt ${attempts} failed for ${urlToScrape}. Reason: ${error.message}`);
                 if (attempts >= maxRetries) {
-                    console.error(`[FATAL] All ${maxRetries} attempts failed for ${urlToScrape}. Moving on.`);
-                    keepGoing = false; // Stop trying for this base URL
+                    // Throw an error to be caught by the main try/catch block, which will save progress and exit.
+                    throw new Error(`All ${maxRetries} attempts failed for ${urlToScrape}. Aborting script.`);
                 } else {
                     // Exponential backoff: wait longer after each failed attempt.
                     const baseDelay = 2000; // 2 seconds
@@ -193,24 +184,52 @@ async function scrapeLocationsForCity(browser, cityUrl) {
  */
 async function main() {
     console.log('[START] Launching scraping process...');
-    const browser = await puppeteer.launch({ headless: true });
-    const finalData = {};
+
+    let finalData = {};
+    // Check if a progress file exists to resume from a previous session.
+    if (fs.existsSync(OUTPUT_FILE)) {
+        try {
+            console.log(`[INFO] Found existing data file. Attempting to resume session...`);
+            const savedData = fs.readFileSync(OUTPUT_FILE, 'utf8');
+            finalData = JSON.parse(savedData);
+            console.log(`[INFO] Successfully loaded ${Object.keys(finalData).length} previously scraped cities.`);
+        } catch (e) {
+            console.error(`[ERROR] Could not parse existing data file. Starting fresh.`, e);
+            finalData = {};
+        }
+    }
+
+    // Add `--no-sandbox` and `--disable-setuid-sandbox` arguments for running in a container or as root.
+    const browser = await puppeteer.launch({ 
+        headless: true, 
+        args: ['--no-sandbox', '--disable-setuid-sandbox'] 
+    });
 
     try {
         // Step 1: Get all city URLs by processing all paginated results.
-        let cityUrls = await scrapeCityUrls(browser);
+        let allCityUrls = await scrapeCityUrls(browser);
+        
+        // Filter out cities that have already been scraped in a previous session.
+        const previouslyScrapedCityNames = Object.keys(finalData);
+        let cityUrlsToScrape = allCityUrls.filter(url => {
+            const urlParts = url.split('/').filter(Boolean);
+            const cityName = urlParts[urlParts.length - 1];
+            return !previouslyScrapedCityNames.includes(cityName);
+        });
+        console.log(`[INFO] Total cities found: ${allCityUrls.length}. Cities remaining to scrape: ${cityUrlsToScrape.length}`);
+
 
         // Step 2: Apply the CITY_LIMIT if it's set.
-        if (CITY_LIMIT && cityUrls.length > CITY_LIMIT) {
-            console.warn(`[WARN] Limiting scrape to the first ${CITY_LIMIT} of ${cityUrls.length} cities found.`);
-            cityUrls = cityUrls.slice(0, CITY_LIMIT);
+        if (CITY_LIMIT && cityUrlsToScrape.length > CITY_LIMIT) {
+            console.warn(`[WARN] Limiting scrape to the first ${CITY_LIMIT} remaining cities as configured.`);
+            cityUrlsToScrape = cityUrlsToScrape.slice(0, CITY_LIMIT);
         }
 
         // Step 3: Loop through each city URL and scrape all its locations via pagination.
         let cityCounter = 0;
-        for (const cityUrl of cityUrls) {
+        for (const cityUrl of cityUrlsToScrape) {
             cityCounter++;
-            console.log(`\n[PROGRESS] Scraping city ${cityCounter} of ${cityUrls.length}...`);
+            console.log(`\n[PROGRESS] Scraping city ${cityCounter} of ${cityUrlsToScrape.length}...`);
             const urlParts = cityUrl.split('/').filter(Boolean);
             const cityName = urlParts[urlParts.length - 1];
 
@@ -218,7 +237,7 @@ async function main() {
             finalData[cityName] = locations;
 
              // Add a delay before moving to the next city
-            if (cityCounter < cityUrls.length) {
+            if (cityCounter < cityUrlsToScrape.length) {
                 await sleep(3000, 6000);
             }
         }
@@ -228,7 +247,11 @@ async function main() {
         console.log(`\n[COMPLETE] Scraping finished. All data saved to ${OUTPUT_FILE}`);
 
     } catch (error) {
-        console.error('[FATAL] A critical error occurred during the scraping process:', error);
+        console.error('\n[FATAL] A critical error occurred during the scraping process. Saving progress...');
+        // In case of a fatal crash, save whatever data has been collected so far.
+        fs.writeFileSync(OUTPUT_FILE, JSON.stringify(finalData, null, 2));
+        console.log(`[INFO] Progress saved to ${OUTPUT_FILE}. You can restart the script to resume.`);
+        console.error(error.message);
     } finally {
         await browser.close();
         console.log('[END] Browser closed.');
