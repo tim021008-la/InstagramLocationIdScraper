@@ -9,7 +9,7 @@ Instagram Location Scraper Documentation
 
 This Node.js script is a powerful and resilient web scraper designed to recursively collect location data from Instagram's "Explore Locations" pages. It starts from a high-level country page, automatically discovers all the cities listed by navigating through all available pages, and then proceeds to visit each city page to gather a complete list of all specific locations (e.g., parks, restaurants, landmarks).
 
-The entire process is automated using Puppeteer, which controls a headless Chrome browser. The script is built to be robust, incorporating polite delays, a multi-attempt retry mechanism, and exponential backoff to handle network errors and rate-limiting gracefully. The final output is a well-structured JSON file, perfect for analysis or use in other applications.
+The entire process is automated using Puppeteer, which controls a headless Chrome browser. The script is built to be robust, incorporating delays, a multi-attempt retry mechanism, and exponential backoff to handle network errors and rate-limiting gracefully. The final output is a well-structured JSON file, perfect for analysis or use in other applications.
 
 ### **2\. Features**
 
@@ -39,24 +39,7 @@ Before running the script, you must have the following installed on your system:
 *   [**npm**](https://www.npmjs.com/get-npm): (Node.js Package Manager, typically installed with Node.js)
     
 
-### **4\. Setup and Execution**
-
-Follow these steps to get the scraper up and running:
-
-1.  mkdir instagram-scrapercd instagram-scraper
-    
-2.  **Save the Script:**Save the provided JavaScript code into a file named scraper.js inside this new directory.
-    
-3.  npm init -y
-    
-4.  npm install puppeteerThis command will download the library and a version of Chromium that is guaranteed to work with it. This may take a few minutes.
-    
-5.  node scraper.js
-    
-
-You will see status messages logged in the terminal as the script launches the browser, navigates to pages, and scrapes data.
-
-### **5\. Configuration**
+### **4\. Configuration**
 
 You can customize the scraper's behavior by editing the configuration variables at the top of the scraper.js file.
 
@@ -67,7 +50,7 @@ You can customize the scraper's behavior by editing the configuration variables 
 *   CITY\_LIMIT: A number that limits how many cities will be scraped. This is very useful for testing to ensure the scraper is working without waiting for a full run. To scrape all available cities, set this value to null.
     
 
-### **6\. How It Works**
+### **5\. How It Works**
 
 The script is orchestrated by the main() function and relies on a generic, reusable scrapeAllPages() function for its core logic:
 
@@ -88,7 +71,7 @@ The script is orchestrated by the main() function and relies on a generic, reusa
 8.  **Close Browser:** The finally block ensures the browser instance is always closed to free up system resources, even if an error occurred.
     
 
-### **7\. Output Format**
+### **6\. Output Format**
 
 The final output is a single JSON file (instagram\_locations.json by default). The data is structured as an object where each top-level key is a city's name, and the value is an array of location objects found within that city.
 
