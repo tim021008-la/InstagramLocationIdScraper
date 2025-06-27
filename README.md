@@ -92,10 +92,6 @@ The script is orchestrated by the main() function and relies on a generic, reusa
 
 The final output is a single JSON file (instagram\_locations.json by default). The data is structured as an object where each top-level key is a city's name, and the value is an array of location objects found within that city.
 
-**Example instagram\_locations.json:**
-
-Plain textANTLR4BashCC#CSSCoffeeScriptCMakeDartDjangoDockerEJSErlangGitGoGraphQLGroovyHTMLJavaJavaScriptJSONJSXKotlinLaTeXLessLuaMakefileMarkdownMATLABMarkupObjective-CPerlPHPPowerShell.propertiesProtocol BuffersPythonRRubySass (Sass)Sass (Scss)SchemeSQLShellSwiftSVGTSXTypeScriptWebAssemblyYAMLXML`   {    "berlin-germany": [      {        "name": "Brandenburg Gate",        "url": "https://www.instagram.com/explore/locations/213034825/brandenburg-gate/"      },      {        "name": "East Side Gallery",        "url": "https://www.instagram.com/explore/locations/236892524/east-side-gallery/"      }    ],    "hamburg-germany": [      {        "name": "Elbphilharmonie Hamburg",        "url": "https://www.instagram.com/explore/locations/1001090549912458/elbphilharmonie-hamburg/"      },      {        "name": "Miniatur Wunderland",        "url": "https://www.instagram.com/explore/locations/213565882/miniatur-wunderland/"      }    ]  }   `
-
 ### **Disclaimer**
 
 *   Web scraping can be against the terms of service of some websites. Always scrape responsibly and ethically.
